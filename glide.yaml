@@ -1,0 +1,14 @@
+package: github.com/itang/qrcode-demo.go
+import:
+- package: github.com/kataras/iris
+  version: v3.0.0
+  subpackages:
+  - iris
+- package: github.com/iris-contrib/middleware
+  subpackages:
+  - logger
+  - recovery
+- package: gopkg.in/bieber/barcode.v0
+  version: ^0.1.0
+- package: github.com/gorilla/websocket
+  version: ^1.0.0
