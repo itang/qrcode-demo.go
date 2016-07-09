@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"errors"
-	"fmt"
 	"image/png"
 	"log"
 	"net/http"
@@ -32,12 +31,12 @@ func main() {
 	ws := iris.Websocket // get the websocket server
 	//在golang 1.7下工作有问题??
 	ws.OnConnection(func(c websocket.Connection) {
-		fmt.Println("client: " + c.ID() + " connected")
+		log.Println("client: " + c.ID() + " connected")
 		//c.To(websocket.Broadcast).EmitMessage([]byte("client: " + c.ID() + " connected"))
 		c.OnMessage(func(message []byte) {
-			ret, err := decodeFromImgDataUrl(string(message))
+			ret, err := scanFromImgDataUrl(string(message))
 			if err != nil {
-				fmt.Printf("error:%v\n", err)
+				log.Printf("error:%v\n", err)
 				c.EmitMessage([]byte(err.Error()))
 			} else {
 				c.EmitMessage([]byte(ret))
@@ -45,16 +44,16 @@ func main() {
 		})
 
 		c.OnError(func(err string) {
-			fmt.Println("websocket error: ", err)
+			log.Println("websocket error: ", err)
 		})
 
 		c.OnDisconnect(func() {
-			fmt.Printf("\nConnection with ID: %s has been disconnected!", c.ID())
+			log.Printf("\nConnection with ID: %s has been disconnected!", c.ID())
 		})
 	})
 
 	go func() {
-		fmt.Println("listen on :8080...")
+		log.Println("listen on :8080...")
 		iris.Listen(":8080")
 	}()
 
@@ -73,6 +72,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer c.Close()
+
 	for {
 		mt, message, err := c.ReadMessage()
 		if err != nil {
@@ -81,9 +81,9 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		//log.Printf("recv: %s", message)
 
-		ret, err := decodeFromImgDataUrl(string(message))
+		ret, err := scanFromImgDataUrl(string(message))
 		if err != nil {
-			fmt.Printf("error:%v\n", err)
+			log.Printf("error:%v\n", err)
 			c.WriteMessage(mt, []byte(err.Error()))
 		} else {
 			c.WriteMessage(mt, []byte(ret))
@@ -91,8 +91,8 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func decodeFromImgDataUrl(dataUrl string) (ret string, err error) {
-	fmt.Println("dataUrl", dataUrl)
+func scanFromImgDataUrl(dataUrl string) (ret string, err error) {
+	//fmt.Println("dataUrl", dataUrl)
 	arr := strings.Split(string(dataUrl), ",")
 	//fmt.Printf("arr:%v\n", arr)
 
@@ -100,7 +100,7 @@ func decodeFromImgDataUrl(dataUrl string) (ret string, err error) {
 	if len(arr) > 0 {
 		imageContent = arr[1]
 	} else {
-		return "", errors.New("输入格式有误")
+		return "", errors.New("格式有误, 正确的格式如: image/png;base64,xxxxx")
 	}
 
 	byteData, err := base64.StdEncoding.DecodeString(imageContent)
@@ -108,10 +108,9 @@ func decodeFromImgDataUrl(dataUrl string) (ret string, err error) {
 		return
 	}
 
-	fmt.Println("len:", len(byteData))
+	log.Println("image bytes:", len(byteData))
 
 	src, err := png.Decode(bytes.NewReader(byteData))
-
 	if err != nil {
 		return
 	}
@@ -121,12 +120,12 @@ func decodeFromImgDataUrl(dataUrl string) (ret string, err error) {
 
 	symbols, _ := scanner.ScanImage(img)
 	for _, s := range symbols {
-		fmt.Println(s.Type.Name(), s.Data, s.Quality, s.Boundary)
+		log.Println(s.Type.Name(), s.Data, s.Quality, s.Boundary)
 	}
 
 	if len(symbols) > 0 {
 		ret = symbols[0].Data
-		fmt.Println("get result:", ret)
+		log.Println("get result:", ret)
 
 		return
 	} else {
